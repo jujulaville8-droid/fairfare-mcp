@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-20T00:00:00+00:00",
+  "provenance": "Manually transcribed structured facts from public pages opened with the browsing tool on 2026-09-20. Shell HTTP unavailable. Not a successful CLI refresh or checkout validation.",
+  "promos": [
+    {
+      "code": "FIRSTEATS30",
+      "app": "uber_eats",
+      "discount_type": "fixed",
+      "value": "30",
+      "minimum_order": "40",
+      "expires": "2026-12-31",
+      "region": "CA",
+      "observed_on": "2026-09-20",
+      "source_url": "https://www.uber.com/ca/en/blog/can-promo-cards/",
+      "status": "documented",
+      "cap": null,
+      "starts": null,
+      "new_customer_only": true,
+      "restaurants": [],
+      "terms": "First Uber Eats order only; food subtotal minimum; fees/taxes excluded; no stacking. Exclusions may apply."
+    },
+    {
+      "code": "K5248WMzwj",
+      "app": "skip",
+      "discount_type": "fixed",
+      "value": "7",
+      "minimum_order": null,
+      "expires": null,
+      "region": "CA-unconfirmed",
+      "observed_on": "2026-09-20",
+      "source_url": "https://www.lovecoupons.ca/skipthedishes",
+      "status": "unverified",
+      "cap": null,
+      "starts": null,
+      "new_customer_only": true,
+      "restaurants": [],
+      "terms": "Aggregator advertises a first-order saving. Minimum spend, expiry and Toronto eligibility not established; excluded."
+    },
+    {
+      "code": "UALDVQ95BLY5",
+      "app": "skip",
+      "discount_type": "fixed",
+      "value": "5",
+      "minimum_order": null,
+      "expires": null,
+      "region": "CA-unconfirmed",
+      "observed_on": "2026-09-20",
+      "source_url": "https://www.lovecoupons.ca/skipthedishes",
+      "status": "unverified",
+      "cap": null,
+      "starts": null,
+      "new_customer_only": false,
+      "restaurants": [
+        "Subway"
+      ],
+      "terms": "Aggregator advertises a Subway Footlong Combo saving. Expiry, minimum and Toronto eligibility unknown; excluded."
+    }
+  ],
+  "sources": [
+    {
+      "id": "uber_official",
+      "app": "uber_eats",
+      "url": "https://www.uber.com/ca/en/blog/can-promo-cards/",
+      "status": "browser_snapshot",
+      "observed_on": "2026-09-20",
+      "count": 1
+    },
+    {
+      "id": "uber_coupons",
+      "app": "uber_eats",
+      "url": "https://www.lovecoupons.ca/ubereats",
+      "status": "browser_snapshot",
+      "observed_on": "2026-09-20",
+      "count": 0
+    },
+    {
+      "id": "door_coupons",
+      "app": "doordash",
+      "url": "https://www.lovecoupons.ca/doordash",
+      "status": "browser_snapshot",
+      "observed_on": "2026-09-20",
+      "count": 0
+    },
+    {
+      "id": "skip_coupons",
+      "app": "skip",
+      "url": "https://www.lovecoupons.ca/skipthedishes",
+      "status": "browser_snapshot",
+      "observed_on": "2026-09-20",
+      "count": 2
+    }
+  ]
+}
