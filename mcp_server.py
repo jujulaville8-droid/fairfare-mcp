@@ -23,6 +23,7 @@ from starlette.responses import JSONResponse
 from dealwatch.collector import load, refresh
 from dealwatch.compare import compare
 from dealwatch.fees import FEES
+from dealwatch import geo
 
 HERE = Path(__file__).parent
 BUNDLED = HERE / "dealwatch" / "data" / "promos.json"
@@ -35,7 +36,10 @@ mcp = FastMCP(
         "SkipTheDishes. All totals are ESTIMATES built from a dated snapshot of "
         "public promo pages plus editable fee assumptions — never live checkout "
         "quotes. The same menu price is assumed on every app; restaurant/dish "
-        "availability on each app is NOT checked."
+        "availability on each app is NOT checked. find_restaurants locates nearby "
+        "restaurants by cuisine from the user's location (OpenStreetMap data); "
+        "pass its distance_km into compare_delivery_prices for distance-scaled "
+        "delivery fees."
     ),
     transport_security=TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
@@ -56,6 +60,8 @@ def compare_delivery_prices(
     order_subtotal: float,
     tip: float = 0.0,
     new_customer_apps: list[str] | None = None,
+    location: str | None = None,
+    distance_km: float | None = None,
 ) -> str:
     """Rank estimated Toronto delivery totals across DoorDash, Uber Eats, SkipTheDishes.
 
@@ -63,19 +69,28 @@ def compare_delivery_prices(
     the same food price on every app, and does not check restaurant availability or
     real checkout prices. `restaurant` is just a label for the comparison.
     `new_customer_apps` may contain any of: doordash, uber_eats, skip.
+    `location` is a label for where the order is going (postal code, address or
+    neighbourhood) shown in the header. `distance_km` is the restaurant's distance
+    from that location (from find_restaurants); when given, delivery fees are
+    scaled by distance instead of the flat midpoint, which can change the ranking.
     """
     valid = [a for a in (new_customer_apps or []) if a in FEES]
     data, snapshot_name = _snapshot()
     rows = compare(
         restaurant, order_subtotal, data["promos"],
-        new_customer_apps=valid, tip=tip,
+        new_customer_apps=valid, tip=tip, distance_km=distance_km,
     )
+    where = location.strip() if location and location.strip() else "Toronto"
     lines = [
-        f"FairFare estimate - Toronto - {rows[0].subtotal:.2f} CAD food subtotal",
+        f"FairFare estimate - {where} - {rows[0].subtotal:.2f} CAD food subtotal",
         f"Promo snapshot: {snapshot_name} (dated - refresh when stale)",
         "Estimates only: same menu price assumed on all apps; availability not checked.",
-        "",
     ]
+    if distance_km is not None:
+        lines.append(
+            f"Delivery fees scaled for ~{float(distance_km):.1f} km restaurant distance."
+        )
+    lines.append("")
     for rank, row in enumerate(rows, 1):
         promo = row.promo.code if row.promo else "none found"
         lines.append(
@@ -91,6 +106,45 @@ def compare_delivery_prices(
             lines.append(f"   source: {row.promo.source_url}")
     if len(rows) > 1 and rows[0].high >= min(r.low for r in rows[1:]):
         lines.append("Fee ranges overlap - real delivery fees could change the ranking.")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def find_restaurants(
+    cuisine: str,
+    location: str,
+    limit: int = 5,
+) -> str:
+    """Find nearby restaurants serving a cuisine, using the user's location.
+
+    `cuisine` e.g. "thai", "sushi", "pizza". `location` is a postal code, address
+    or neighbourhood (Toronto area). Returns the closest matches with distance in
+    km. Data is OpenStreetMap - whether a restaurant is listed on a delivery app
+    is NOT checked. Pass a result's distance_km into compare_delivery_prices for
+    distance-scaled delivery fees.
+    """
+    limit = max(1, min(int(limit), 20))
+    try:
+        lat, lon, label = geo.geocode(location)
+    except ValueError as exc:
+        return f"find_restaurants error: {exc}"
+    try:
+        spots = geo.find_nearby(lat, lon, cuisine, limit=limit)
+    except ValueError as exc:
+        return f"find_restaurants error: {exc}"
+    lines = [
+        f"Restaurants serving {cuisine.strip().lower()} near {label.split(',')[0]} "
+        f"(within {geo.SEARCH_RADIUS_M // 1000} km, closest first):",
+        "App availability NOT checked - verify in the delivery app.",
+        "",
+    ]
+    if not spots:
+        lines.append("No matches found. Try a broader cuisine or a nearby neighbourhood.")
+        return "\n".join(lines)
+    for i, s in enumerate(spots, 1):
+        addr = f" - {s['address']}" if s["address"] else ""
+        lines.append(f"{i}. {s['name']}{addr} - ~{s['distance_km']} km away")
+        lines.append(f"   compare with: distance_km={s['distance_km']}")
     return "\n".join(lines)
 
 

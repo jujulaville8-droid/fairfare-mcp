@@ -35,6 +35,19 @@ python -m dealwatch compare "pizza" --order-total 25 --tip 4
 `--new-customer` accepts `doordash`, `uber_eats`, or `skip` and can be repeated.
 It describes eligibility; it does not create accounts. Memberships are not modelled.
 
+To compare for a real address instead of the flat fee midpoint, find nearby
+restaurants first, then pass a result's distance into the comparison —
+delivery fees scale with distance (nearby ≈ low end, 10+ km ≈ high end):
+
+```bash
+python -m dealwatch find thai --location "M5V 1J1" --limit 5
+python -m dealwatch compare "Pai Downtown" --order-total 30 --distance-km 0.7 --location "M5V 1J1"
+```
+
+`find` uses free OpenStreetMap data (Photon geocoding + Overpass). Whether a
+restaurant is actually listed on a delivery app is **not** checked — verify in
+the app before ordering.
+
 With the September 20, 2026 snapshot and defaults, the $25 example ranks:
 
 | App | Estimated total | Promo |
