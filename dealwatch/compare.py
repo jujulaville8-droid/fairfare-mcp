@@ -1,14 +1,11 @@
 from dataclasses import dataclass
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 
 from . import fees
+from .fees import money
 from .models import Promo, amount, today
 
 D = Decimal
-
-
-def money(value):
-    return value.quantize(D("0.01"), rounding=ROUND_HALF_UP)
 
 
 @dataclass(frozen=True)
@@ -29,12 +26,20 @@ class Estimate:
     excluded: tuple[str, ...]
 
 
-def compare(restaurant, order_total, promos=(), *, new_customer_apps=(), tip="0", on=None, fee_model=None):
+def compare(restaurant, order_total, promos=(), *, new_customer_apps=(), tip="0", on=None, fee_model=None,
+            distance_km=None):
     subtotal, tip = money(amount(order_total)), money(amount(tip))
     if subtotal <= 0:
         raise ValueError("Order total must be greater than zero")
     if not restaurant.strip():
         raise ValueError("Restaurant/dish must not be empty")
+    if distance_km is not None:
+        try:
+            distance_km = float(distance_km)
+        except (TypeError, ValueError):
+            raise ValueError("distance_km must be a number") from None
+        if distance_km < 0:
+            raise ValueError("distance_km must not be negative")
     on = on or today()
     result = []
     for app, fee in (fee_model if fee_model is not None else fees.FEES).items():
@@ -42,7 +47,10 @@ def compare(restaurant, order_total, promos=(), *, new_customer_apps=(), tip="0"
         if fee.service_max is not None:
             service = min(service, fee.service_max)
         small = fee.small_order_fee if subtotal < fee.small_order_threshold else D(0)
-        delivery = money((fee.delivery_low + fee.delivery_high) / 2)
+        if distance_km is None:
+            delivery = money((fee.delivery_low + fee.delivery_high) / 2)
+        else:
+            delivery = fees.delivery_for_distance(fee, distance_km)
         eligible, excluded = [], []
         for promo in promos:
             if promo.app != app:

@@ -6,9 +6,35 @@ import sys
 from .collector import load, refresh
 from .compare import compare
 from .fees import FEES
+from . import geo
 
 BUNDLED = Path(__file__).parent / "data" / "promos.json"
 LOCAL = Path("promos.local.json")
+
+
+def _run_find(args) -> int:
+    try:
+        lat, lon, label = geo.geocode(args.location)
+    except (OSError, ValueError) as exc:
+        print(f"dealwatch: {exc}", file=sys.stderr)
+        return 2
+    where = label.split(",")[0]
+    print(f"Restaurants serving {args.cuisine.strip().lower()} near {where} "
+          f"(within {geo.SEARCH_RADIUS_M // 1000} km, closest first):")
+    print("App availability NOT checked - verify in the delivery app.")
+    try:
+        spots = geo.find_nearby(lat, lon, args.cuisine, limit=args.limit)
+    except (OSError, ValueError) as exc:
+        print(f"dealwatch: {exc}", file=sys.stderr)
+        return 2
+    if not spots:
+        print("No matches found. Try a broader cuisine or a nearby neighbourhood.")
+        return 0
+    for i, s in enumerate(spots, 1):
+        addr = f" - {s['address']}" if s["address"] else ""
+        print(f"{i}. {s['name']}{addr} - ~{s['distance_km']} km away")
+        print(f"   compare with: --distance-km {s['distance_km']}")
+    return 0
 
 
 def main(argv=None):
@@ -22,10 +48,20 @@ def main(argv=None):
                       help="Eligible for first-order offers on APP; repeat per app")
     comp.add_argument("--promos", type=Path, help="Use this cache instead of local/bundled data")
     comp.add_argument("--refresh", action="store_true", help="Refresh public pages before comparison")
+    comp.add_argument("--distance-km", default=None,
+                      help="Restaurant distance in km; scales delivery fees instead of the flat midpoint")
+    comp.add_argument("--location", default=None,
+                      help="Label for where the order is going (postal code, address, neighbourhood)")
+    find = commands.add_parser("find", help="Find nearby restaurants by cuisine (OpenStreetMap data)")
+    find.add_argument("cuisine", help='Cuisine, e.g. "thai", "sushi", "pizza"')
+    find.add_argument("--location", required=True, help="Postal code, address or neighbourhood (Toronto area)")
+    find.add_argument("--limit", type=int, default=5, help="Max results (default: 5)")
     ref = commands.add_parser("refresh", help="Fetch configured public promo/coupon pages")
     ref.add_argument("--output", type=Path, default=LOCAL)
     args = parser.parse_args(argv)
     try:
+        if args.command == "find":
+            return _run_find(args)
         if args.command == "refresh":
             old = load(args.output if args.output.exists() else BUNDLED)
             data = refresh(args.output, old)
@@ -39,8 +75,12 @@ def main(argv=None):
             path = args.promos or LOCAL
             data = refresh(path, data)
         rows = compare(args.restaurant, args.order_total, data["promos"],
-                       new_customer_apps=args.new_customer, tip=args.tip)
-        print(f"Toronto • {args.restaurant} • CAD food subtotal ${rows[0].subtotal:.2f}")
+                       new_customer_apps=args.new_customer, tip=args.tip,
+                       distance_km=args.distance_km)
+        where = args.location.strip() if args.location and args.location.strip() else "Toronto"
+        print(f"{where} • {args.restaurant} • CAD food subtotal ${rows[0].subtotal:.2f}")
+        if args.distance_km is not None:
+            print(f"Delivery fees scaled for ~{float(args.distance_km):.1f} km restaurant distance.")
         print(f"Dated public-source cache: {path}")
         print("Estimates only: same food price on each app; restaurant/dish availability not checked.")
         print("Includes estimated 13% tax and stated tip; standard fees, no membership benefits.")

@@ -6,7 +6,11 @@ Keep every fee/tax assumption here. Delivery midpoint determines ranking;
 the low/high values give scenarios, not statistical confidence bounds.
 """
 from dataclasses import dataclass
-from decimal import Decimal as D
+from decimal import Decimal as D, ROUND_HALF_UP
+
+
+def money(value) -> D:
+    return D(value).quantize(D("0.01"), rounding=ROUND_HALF_UP)
 
 
 @dataclass(frozen=True)
@@ -35,3 +39,18 @@ TAX_RATE = D("0.13")
 # Conservative: estimate tax on food before discounts plus modelled fees.
 TAX_ON_PRE_DISCOUNT = True
 MAX_PROMO_AGE_DAYS = 7
+
+# Distance (km) at/above which the delivery_high fee applies. Planning
+# assumption, not a published rate: delivery_low ~= next door, linear in between.
+DISTANCE_REFERENCE_KM = 10.0
+
+
+def delivery_for_distance(fee: Fee, km: float) -> D:
+    """Scale a delivery fee by restaurant distance.
+
+    Linear interpolation: fee is delivery_low next door, delivery_high at or
+    beyond DISTANCE_REFERENCE_KM. Lets compare() rank apps for a real address
+    instead of the flat low/high midpoint.
+    """
+    frac = min(max(float(km), 0.0) / DISTANCE_REFERENCE_KM, 1.0)
+    return money(fee.delivery_low + (fee.delivery_high - fee.delivery_low) * D(str(frac)))
