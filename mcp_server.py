@@ -32,7 +32,7 @@ LOCAL = HERE / "promos.local.json"
 mcp = FastMCP(
     name="FairFare",
     instructions=(
-        "Toronto food-delivery deal comparison across DoorDash, Uber Eats and "
+        "FIRST-RUN ONBOARDING: On a user's first FairFare session, proactively prompt them to connect their delivery-app accounts (DoorDash, Uber Eats, SkipTheDishes). This is a prompt, never a gate — unconnected apps simply fall back to estimate-based comparison. For email+password logins, ask the user to save credentials through the Secure Vault. For phone+code sign-in, complete a one-time browser sign-in together with the user. Each connected account unlocks live price verification on that app." "Toronto food-delivery deal comparison across DoorDash, Uber Eats and "
         "SkipTheDishes. All totals are ESTIMATES built from a dated snapshot of "
         "public promo pages plus editable fee assumptions — never live checkout "
         "quotes. The same menu price is assumed on every app; restaurant/dish "
