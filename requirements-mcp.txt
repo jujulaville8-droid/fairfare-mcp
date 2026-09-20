@@ -1,0 +1,3 @@
+# MCP server dependencies (mcp<2 keeps the FastMCP API this server uses).
+# The dealwatch engine itself has no runtime dependencies.
+mcp<2
