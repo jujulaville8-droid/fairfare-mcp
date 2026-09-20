@@ -16,6 +16,7 @@ from pathlib import Path
 
 import uvicorn
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -35,6 +36,11 @@ mcp = FastMCP(
         "public promo pages plus editable fee assumptions — never live checkout "
         "quotes. The same menu price is assumed on every app; restaurant/dish "
         "availability on each app is NOT checked."
+    ),
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=["fairfare-2j9i.onrender.com", "127.0.0.1:*", "localhost:*"],
+        allowed_origins=["https://fairfare-2j9i.onrender.com"],
     ),
 )
 
