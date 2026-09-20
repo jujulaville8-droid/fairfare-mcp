@@ -18,7 +18,6 @@ import uvicorn
 from mcp.server.fastmcp import FastMCP
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
-from starlette.routing import Route
 
 from dealwatch.collector import load, refresh
 from dealwatch.compare import compare
@@ -112,25 +111,10 @@ if __name__ == "__main__":
 
         class BearerAuth(BaseHTTPMiddleware):
             async def dispatch(self, request, call_next):
-                if request.url.path == "/debug-auth":
-                    return await call_next(request)
                 if request.headers.get("authorization", "") != f"Bearer {token}":
                     return JSONResponse({"error": "unauthorized"}, status_code=401)
                 return await call_next(request)
 
         app.add_middleware(BearerAuth)
-
-    # Temporary diagnostic: reports only booleans/lengths, never secret values.
-    async def debug_auth(request):
-        auth = request.headers.get("authorization", "")
-        return JSONResponse(
-            {
-                "saw_surrogate": "hsurr:" in auth,
-                "matches_server_token": auth == f"Bearer {token}",
-                "header_len": len(auth),
-            }
-        )
-
-    app.router.routes.append(Route("/debug-auth", debug_auth, methods=["GET"]))
 
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
