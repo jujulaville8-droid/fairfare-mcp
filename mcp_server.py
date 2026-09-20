@@ -111,7 +111,7 @@ if __name__ == "__main__":
 
         class BearerAuth(BaseHTTPMiddleware):
             async def dispatch(self, request, call_next):
-                if request.headers.get("authorization", "") != f"Bearer {token}":
+                if request.headers.get("x-fairfare-key", "") != token:
                     return JSONResponse({"error": "unauthorized"}, status_code=401)
                 return await call_next(request)
 
